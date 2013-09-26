@@ -1,0 +1,150 @@
+NAME
+       encode - encode video and/or speech files
+
+SYNOPSIS
+       encode [options...]
+
+DESCRIPTION
+       This demo uses the Codec Engine to encode data from peripheral device
+       drivers to files. Video and speech files are supported. The files
+       created will be encoded elementary streams of video or speech.
+
+       You must supply at least one file for the demo to run.
+
+       The DM350MM and CMEM kernel modules need to be inserted for this demo
+       to run.  Use the script 'loadmodules_hd.sh' to make sure both kernel
+       modules are loaded with adequate parameters.
+
+OPTIONS
+       -v <video file>, --videofile <video file>
+             Encodes video data to the given file. The file will be created if
+             it doesn't exist, and truncated if it does exist. The demo
+             detects which type of video file is supplied using the file
+             extension. Supported video algorithm is MPEG4 SP, H.264 MP
+             (.mpeg4 or .m4v extension, .264).
+
+       -s <speech file>, --speechfile <speech file>
+             Encodes speech data to the given file. The file will be created
+             if it doesn't exist, and truncated if it does exist. The demo
+             detects which type of speech file is supplied using the file
+             extension. The only supported speech algorithm as of now is
+             G.711 (.g711 extension).
+
+       -y <1-3>, --display_standard <1-3>
+             Sets the resolution of the display. If the captured resolution
+             is larger than the display it will be center clamped, and if it
+             is smaller the image will be centered.
+
+                    1       D1 @ 30 fps (NTSC) [Default]
+                    2       D1 @ 25 fps (PAL)
+                    3       720P @ 60 fps
+
+       -r <resolution>, --resolution <resolution>
+             The resolution of video to encode in the format 'width'x'height'.
+             Default is the size of the video standard (720x480 for NTSC,
+             720x576 for PAL, 1280x720 for 720P).
+
+       -b <bit rate>, --videobitrate <bit rate>
+             This option sets the bit rate with which the video will be
+             encoded. Use a negative value for variable bit rate. Default is
+             variable bit rate.
+
+       -x, --svideo
+             Use s-video video input instead of the composite default.
+
+       -l, --linein
+             This option makes the input device for sound recording be the
+             'line in' as opposed to the 'mic in' default.
+
+       -k, --keyboard
+             Enables the keyboard input mode which lets the user input
+             commands using the keyboard in addition to the IR remote control
+             interface. At the prompt type 'help' for a list of available
+             commands.
+
+       -t <seconds>, --time <seconds>
+             The number of seconds to run the demo. Defaults to infinite time.
+
+       -o, --osd
+             Enables the On Screen Display for data visualization. If this
+             option is not passed, the data will be output to stdout instead.
+
+       -h, --help
+             This will print the usage of the demo.
+
+EXAMPLE USAGE
+       First execute this script to load kernel modules required:
+             ./loadmodules_hd.sh
+
+       General usage:
+             ./encode -h
+       
+       H264 HP video encode only @720p resolution with OSD:
+             ./encode -v test.264 -y 3 -o
+       
+       H264 HP video encode from s-video and G.711 speech encode:
+             ./encode -v test.264 -s test.g711 -x
+
+       MPEG4 SP video encode only in CIF NTSC resolution with OSD:
+             ./encode -v test.mpeg4 -r 352x240 -o
+
+       MPEG4 SP video encode at 1Mbps with keyboard interface on D1 PAL display:
+             ./encode -v test.mpeg4 -b 1000000 -k -y 2
+
+
+COPYRIGHT
+       Copyright (c) Texas Instruments Inc 2009
+
+       Use of this software is controlled by the terms and conditions found in
+       the license agreement under which this software has been supplied or
+       provided.
+
+KNOWN ISSUES
+
+VERSION
+       2.0
+
+CHANGELOG
+       1.2, 1.3:
+             In order to support multiple display resolutions on this platform
+             the '-y' flag was added.
+
+             Showing the OSD is now selectable using the '-o' switch. If this
+             option is not set the data will be written to stdout.
+
+       1.1:
+             Support for removing some of the interlacing artifacts before
+             encoding the buffer using the resizer peripheral was added
+             (on by default, use the -d option to disable). In order to
+             parallelize the resizer processing with the DSP processing the
+             video thread was divided into a capture thread and a video
+             processing thread.
+
+             The display thread now uses the VPSS resizer peripheral to fill
+             the display frame buffers. This change reduces the ARM CPU load
+             significantly as memcpy() is no longer used.
+
+       1.0:
+             A 'display' thread has been added to show the raw captured
+             video being currently encoded on the display while it is being
+             encoded. This requires an extra memory copy on the ARM which
+             increases the ARM CPU load slightly.
+
+             A 'writer' thread has been added to parallelize the filesystem
+             I/O with the DSP algorithm processing.
+
+             The demo now supports encoding arbitrary resolutions using the
+             '-r' switch.
+
+             A bit rate parameter was added (-b) to allow the user to change
+             bit rate of the video being encoded.
+
+             The demo now has a keyboard interface (-k) which lets
+             you input the same commands as you would have input using the
+             remote control in the past.
+
+             Added support for s-video video input using the '-x' flag.
+
+SEE ALSO
+       For documentation and release notes on the individual components see
+       the html files in the host installation directory.
