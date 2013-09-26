@@ -263,6 +263,20 @@ Void *captureThrFxn(Void *arg)
         }
 
         if (frameCopy == TRUE) {
+
+            /* Get a buffer from the video thread */
+            fifoRet = Fifo_get(envp->hInFifo, &hDstBuf);
+
+            if (fifoRet < 0) {
+                ERR("Failed to get buffer from video thread\n");
+                cleanup(THREAD_FAILURE);
+            }
+
+            /* Did the video thread flush the fifo? */
+            if (fifoRet == Dmai_EFLUSH) {
+                cleanup(THREAD_SUCCESS);
+            }
+
             /* Copy the captured buffer to the encode buffer */
             if (Framecopy_execute(hFcEnc, hCapBuf, hDstBuf) < 0) {
                 ERR("Failed to execute frame copy job\n");
@@ -313,19 +327,6 @@ Void *captureThrFxn(Void *arg)
             }
         }
 
-        /* Get a buffer from the video thread */
-        fifoRet = Fifo_get(envp->hInFifo, &hDstBuf);
-
-        if (fifoRet < 0) {
-            ERR("Failed to get buffer from video thread\n");
-            cleanup(THREAD_FAILURE);
-        }
-
-        /* Did the video thread flush the fifo? */
-        if (fifoRet == Dmai_EFLUSH) {
-            cleanup(THREAD_SUCCESS);
-        }
-        
         if (frameCopy == TRUE) {
             /* Return the buffer to the capture driver */
             if (Capture_put(hCapture, hCapBuf) < 0) {
