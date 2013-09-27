@@ -195,7 +195,7 @@ Void *videoThrFxn(Void *arg)
         fifoRet = Fifo_get(envp->hWriterOutFifo, &hDstBuf);
 
         if (fifoRet < 0) {
-            ERR("Failed to get buffer from video thread\n");
+            ERR("Failed to get buffer from writer thread\n");
             cleanup(THREAD_FAILURE);
         }
 
@@ -214,7 +214,7 @@ Void *videoThrFxn(Void *arg)
         }
         /* Send encoded buffer to writer thread for filesystem output */
         if (Fifo_put(envp->hWriterInFifo, hDstBuf) < 0) {
-            ERR("Failed to send buffer to display thread\n");
+            ERR("Failed to send buffer to writer thread\n");
             cleanup(THREAD_FAILURE);
         }
 

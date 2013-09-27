@@ -238,7 +238,7 @@ Void *captureThrFxn(Void *arg)
             }
             /* Send buffer to video thread for encoding */
             if (Fifo_put(envp->hOutFifo, hBuf) < 0) {
-                ERR("Failed to send buffer to display thread\n");
+                ERR("Failed to send buffer to video thread\n");
                 cleanup(THREAD_FAILURE);
             }
         }
@@ -285,29 +285,17 @@ Void *captureThrFxn(Void *arg)
 
             /* Send buffer to video thread for encoding */
             if (Fifo_put(envp->hOutFifo, hDstBuf) < 0) {
-                ERR("Failed to send buffer to display thread\n");
+                ERR("Failed to send buffer to video thread\n");
                 cleanup(THREAD_FAILURE);
             }            
         }else {
             /* Send buffer to video thread for encoding */
             if (Fifo_put(envp->hOutFifo, hCapBuf) < 0) {
-                ERR("Failed to send buffer to display thread\n");
+                ERR("Failed to send buffer to video thread\n");
                 cleanup(THREAD_FAILURE);
             }
         }
         if (frameCopy == TRUE) {
-            /* Alter the position of the image to center it */
-            BufferGfx_getDimensions(hCapBuf, &capDim);
-            BufferGfx_getDimensions(hDisBuf, &disDim);
-
-            if (capDim.width != disDim.width || capDim.height != disDim.height) {
-                disDim.x      = ((disDim.width  - capDim.width) / 2) & ~0xf;
-                disDim.y      = (disDim.height - capDim.height) / 2;
-                disDim.width  = capDim.width;
-                disDim.height = capDim.height;
-                BufferGfx_setDimensions(hDisBuf, &disDim);
-            }
-
             /* Copy the captured buffer to the display buffer */
             if (Framecopy_execute(hFcDisp, hCapBuf, hDisBuf) < 0) {
                 ERR("Failed to execute frame copy job\n");

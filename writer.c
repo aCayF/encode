@@ -23,13 +23,12 @@
 #include <ti/sdo/dmai/BufferGfx.h>
 #include <ti/sdo/dmai/Rendezvous.h>
 
-#include "writer.h"
-#include "shm.h"
-#include "../demo.h"
-
 /* Number of buffers in writer pipe */
 #define NUM_WRITER_BUFS         9
 
+/******************************************************************************
+ * writerThrFxn
+ ******************************************************************************/
 Void *writerThrFxn(Void *arg)
 {
     WriterEnv          *envp            = (WriterEnv *) arg;
@@ -63,7 +62,7 @@ Void *writerThrFxn(Void *arg)
     /* Send all buffers to the video thread to be filled with encoded data */
     for (bufIdx = 0; bufIdx < NUM_WRITER_BUFS; bufIdx++) {
         if (Fifo_put(envp->hOutFifo, BufTab_getBuf(hBufTab, bufIdx)) < 0) {
-            ERR("Failed to send buffer to display thread\n");
+            ERR("Failed to send buffer to video thread\n");
             cleanup(THREAD_FAILURE);
         }
     }
@@ -85,9 +84,9 @@ Void *writerThrFxn(Void *arg)
             cleanup(THREAD_SUCCESS);
         }
 
-        /* Return buffer to capture thread */
+        /* Return buffer to video thread */
         if (Fifo_put(envp->hOutFifo, hOutBuf) < 0) {
-            ERR("Failed to send buffer to display thread\n");
+            ERR("Failed to send buffer to video thread\n");
             cleanup(THREAD_FAILURE);
         }
     }
