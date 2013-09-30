@@ -25,6 +25,8 @@
 #include "capture.h"
 #include "../demo.h"
 
+#define MODULE_NAME     "Capture Thread"
+
 /* Buffering for the display driver */
 #define NUM_DISPLAY_BUFS         3
 

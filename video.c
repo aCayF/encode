@@ -24,6 +24,8 @@
 #include "video.h"
 #include "../demo.h"
 
+#define MODULE_NAME   "Video Thread"
+
 #ifndef YUV_420SP
 #define YUV_420SP 256
 #endif 

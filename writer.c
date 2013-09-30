@@ -23,6 +23,8 @@
 #include <ti/sdo/dmai/BufferGfx.h>
 #include <ti/sdo/dmai/Rendezvous.h>
 
+#define MODULE_NAME     "Writer Thread"
+
 /* Number of buffers in writer pipe */
 #define NUM_WRITER_BUFS         9
 
