@@ -166,17 +166,8 @@ Void *captureThrFxn(Void *arg)
     }
 
     /* Create display device driver instance */
-    dAttrs.videoStd = envp->videoStd;
-    if ( (dAttrs.videoStd == VideoStd_CIF) ||
-        (dAttrs.videoStd == VideoStd_SIF_NTSC) ||
-        (dAttrs.videoStd == VideoStd_SIF_PAL) ||
-        (dAttrs.videoStd == VideoStd_VGA) ||
-        (dAttrs.videoStd == VideoStd_D1_NTSC) ||        
-        (dAttrs.videoStd == VideoStd_D1_PAL) ) {
-        dAttrs.videoOutput = Display_Output_COMPOSITE; //plc
-    } else {
-        dAttrs.videoOutput = Display_Output_COMPONENT;
-    }    
+    /* TODO: Set the videooutput to LCD according to the envp */
+    dAttrs.videoOutput = Display_Output_LCD;
     dAttrs.numBufs    = NUM_DISPLAY_BUFS;
     dAttrs.colorSpace = colorSpace;
     hDisplay = Display_create(hBufTab, &dAttrs);
