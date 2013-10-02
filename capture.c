@@ -50,15 +50,16 @@ Void *captureThrFxn(Void *arg)
     Display_Attrs         dAttrs   = Display_Attrs_DM365_VID_DEFAULT;
     Framecopy_Attrs       fcAttrs  = Framecopy_Attrs_DEFAULT;
     BufferGfx_Attrs       gfxAttrs = BufferGfx_Attrs_DEFAULT;    
+    BufferGfx_Attrs       RzbgfxAttrs = BufferGfx_Attrs_DEFAULT;    
     Capture_Handle        hCapture = NULL;
     Display_Handle        hDisplay = NULL;
     Framecopy_Handle      hFcDisp  = NULL;
     Framecopy_Handle      hFcEnc   = NULL;
     BufTab_Handle         hBufTab  = NULL;    
-    Buffer_Handle         hDstBuf, hCapBuf, hDisBuf, hBuf;
+    Buffer_Handle         hDstBuf, hCapBuf, hDisBuf, hRzbBuf, hBuf;
     BufferGfx_Dimensions  disDim, capDim;
     VideoStd_Type         videoStd;
-    Int32                 width, height, bufSize;
+    Int32                 width, height, lcdwidth, lcdheight, bufSize, RzbbufSize;
     Int                   fifoRet;
     ColorSpace_Type       colorSpace = ColorSpace_YUV420PSEMI; //ColorSpace_UYVY;
     Int                   bufIdx;
@@ -177,6 +178,48 @@ Void *captureThrFxn(Void *arg)
         cleanup(THREAD_FAILURE);
     }
     if (frameCopy == TRUE) {
+        /* Create a buffer for the output of resizer b */
+        RzbgfxAttrs.colorSpace = ColorSpace_YUV420PSEMI;
+        /* TODO: Get the resolution from resizer b */
+        width = envp->resizeWidth;
+        height = envp->resizeHeight;
+        VideoStd_getResolution(VideoStd_LCD, &lcdwidth, &lcdheight);
+        RzbgfxAttrs.dim.width = width; 
+        RzbgfxAttrs.dim.height = height;
+        /* Guarantee that lineLength is multiple of 32 */
+        RzbgfxAttrs.dim.lineLength =
+        ((Int32)((BufferGfx_calcLineLength(RzbgfxAttrs.dim.width,
+                              ColorSpace_YUV420PSEMI)+31)/32))*32;
+        if (width < lcdwidth) {
+            ERR("Dispaly's width is greater than resizer's width\n");
+            cleanup(THREAD_FAILURE);
+        } else {
+            RzbgfxAttrs.dim.x = ((width  - lcdwidth) / 2);
+            Dmai_dbg1("dim.x is %d\n",RzbgfxAttrs.dim.x);
+        }
+        if (height < lcdheight) {
+            ERR("Display's height is greater than resizer's height\n");
+            cleanup(THREAD_FAILURE);
+        } else {
+            RzbgfxAttrs.dim.y = ((height - lcdheight) / 2) & ~0x01;
+            Dmai_dbg1("dim.y is %d\n",RzbgfxAttrs.dim.y);
+        }
+        RzbgfxAttrs.bAttrs.reference = TRUE;
+
+        if (colorSpace ==  ColorSpace_YUV420PSEMI) {
+            RzbbufSize = RzbgfxAttrs.dim.lineLength 
+                         * RzbgfxAttrs.dim.height * 3 / 2;
+        } else {
+            RzbbufSize = RzbgfxAttrs.dim.lineLength 
+                         * RzbgfxAttrs.dim.height * 2;
+        }
+        hRzbBuf = Buffer_create(RzbbufSize, BufferGfx_getBufferAttrs(&RzbgfxAttrs));
+
+        if (hRzbBuf == NULL) {                                                                                                                   
+            ERR("Failed to create DstBuf\n");                                                                                                    
+            cleanup(THREAD_FAILURE);
+        }
+
         /* Get a buffer from the video thread */
         fifoRet = Fifo_get(envp->hInFifo, &hDstBuf);
 
@@ -256,6 +299,10 @@ Void *captureThrFxn(Void *arg)
         }
 
         if (frameCopy == TRUE) {
+            /* Set hRzbBuf's UserPtr to the offset of the hCapBuf */
+            Buffer_setUserPtr(hRzbBuf,(Int8*)(Buffer_getUserPtr(hCapBuf)
+                                             +Buffer_getSize(hCapBuf))); 
+
 
             /* Get a buffer from the video thread */
             fifoRet = Fifo_get(envp->hInFifo, &hDstBuf);
@@ -358,6 +405,11 @@ cleanup:
     if (hBufTab) {
         BufTab_delete(hBufTab);
     }
+
+    if (hRzbBuf) {
+        Buffer_delete(hRzbBuf);
+    }
+
 
     return status;
 }
