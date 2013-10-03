@@ -546,6 +546,9 @@ Int main(Int argc, Char *argv[])
         captureEnv.videoInput         = args.videoInput;
         captureEnv.imageWidth         = args.imageWidth;
         captureEnv.imageHeight        = args.imageHeight;
+        /* TODO */
+        VideoStd_getResolution(VideoStd_CIF, &captureEnv.resizeWidth,
+                                             &captureEnv.resizeHeight);
 
         if (pthread_create(&captureThread, &attr, captureThrFxn, &captureEnv)) {
             ERR("Failed to create capture thread\n");

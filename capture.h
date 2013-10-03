@@ -31,6 +31,8 @@ typedef struct CaptureEnv {
     VideoStd_Type     videoStd;
     Int32             imageWidth;
     Int32             imageHeight;
+    Int32             resizeWidth;
+    Int32             resizeHeight;
     Capture_Input     videoInput;
 } CaptureEnv;
 
