@@ -244,13 +244,14 @@ Void *captureThrFxn(Void *arg)
 
         /* Configure frame copy jobs */
         if (Framecopy_config(hFcDisp,
-                             BufTab_getBuf(Capture_getBufTab(hCapture), 0),
+                             hRzbBuf,
                              BufTab_getBuf(Display_getBufTab(hDisplay), 0)) < 0) {
             ERR("Failed to configure frame copy job\n");
             cleanup(THREAD_FAILURE);
         }
 
         /* Create frame copy module for encode buffer */
+        fcAttrs.accel = TRUE;
         hFcEnc = Framecopy_create(&fcAttrs);
 
         if (hFcEnc == NULL) {
@@ -328,6 +329,12 @@ Void *captureThrFxn(Void *arg)
                 ERR("Failed to send buffer to video thread\n");
                 cleanup(THREAD_FAILURE);
             }            
+
+            /* Send resized buffer to video thread for encoding */
+            if (Fifo_put(envp->hOutFifo, hRzbBuf) < 0) {
+                ERR("Failed to send buffer to video thread\n");
+                cleanup(THREAD_FAILURE);
+            }            
         }else {
             /* Send buffer to video thread for encoding */
             if (Fifo_put(envp->hOutFifo, hCapBuf) < 0) {
@@ -337,7 +344,7 @@ Void *captureThrFxn(Void *arg)
         }
         if (frameCopy == TRUE) {
             /* Copy the captured buffer to the display buffer */
-            if (Framecopy_execute(hFcDisp, hCapBuf, hDisBuf) < 0) {
+            if (Framecopy_execute(hFcDisp, hRzbBuf, hDisBuf) < 0) {
                 ERR("Failed to execute frame copy job\n");
                 cleanup(THREAD_FAILURE);
             }
