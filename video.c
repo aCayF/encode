@@ -53,7 +53,7 @@ Void *videoThrFxn(Void *arg)
     VIDENC1_DynamicParams  *dynParams;
     Int                     fifoRet;
     Int                     bufIdx;
-    ColorSpace_Type       colorSpace = ColorSpace_YUV420PSEMI;
+    ColorSpace_Type         colorSpace = ColorSpace_YUV420PSEMI;
     Bool                    localBufferAlloc = TRUE;
 
     /* Open the codec engine */
@@ -184,7 +184,7 @@ Void *videoThrFxn(Void *arg)
         fifoRet = Fifo_get(envp->hCaptureOutFifo, &hCapBuf);
 
         if (fifoRet < 0) {
-            ERR("Failed to get buffer from video thread\n");
+            ERR("Failed to get buffer from capture thread\n");
             cleanup(THREAD_FAILURE);
         }
 
@@ -222,7 +222,7 @@ Void *videoThrFxn(Void *arg)
 
         /* Return buffer to capture thread */
         if (Fifo_put(envp->hCaptureInFifo, hCapBuf) < 0) {
-            ERR("Failed to send buffer to display thread\n");
+            ERR("Failed to send buffer to capture thread\n");
             cleanup(THREAD_FAILURE);
         }
 
