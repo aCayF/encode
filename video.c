@@ -45,6 +45,7 @@ Void *videoThrFxn(Void *arg)
     VIDENC1_DynamicParams   defaultDynParams    = Venc1_DynamicParams_DEFAULT;
     BufferGfx_Attrs         gfxAttrs            = BufferGfx_Attrs_DEFAULT;
     Venc1_Handle            hVe1                = NULL;
+    Venc1_Handle            hVe2                = NULL;
     Engine_Handle           hEngine             = NULL;
     BufTab_Handle           hBufTab             = NULL;
     Int                     frameCnt            = 0;
@@ -114,13 +115,56 @@ Void *videoThrFxn(Void *arg)
     /* Create the video encoder */
     hVe1 = Venc1_create(hEngine, envp->videoEncoder, params, dynParams);
 
-    if (hVe1 == NULL) {
+    params->maxWidth              = envp->resizeWidth;
+    params->maxHeight             = envp->resizeHeight;
+    params->encodingPreset        = XDM_HIGH_SPEED;
+    if (colorSpace ==  ColorSpace_YUV420PSEMI) { 
+        params->inputChromaFormat = XDM_YUV_420SP;
+    } else {
+        params->inputChromaFormat = XDM_YUV_422ILE;
+    }
+    params->reconChromaFormat     = XDM_YUV_420SP;
+    params->maxFrameRate          = envp->videoFrameRate;
+    Dmai_dbg1("maxFrameRate = %d\n", envp->videoFrameRate);
+    envp->videoBitRate            = 128*1024;
+    Dmai_dbg1("videoBitRate = %d\n", envp->videoBitRate);
+    /* Set up codec parameters depending on bit rate */
+    if (envp->videoBitRate < 0) {
+        /* Variable bit rate */
+        params->rateControlPreset = IVIDEO_NONE;
+
+        /*
+         * If variable bit rate use a bogus bit rate value (> 0)
+         * since it will be ignored.
+         */
+        params->maxBitRate        = 0;
+    }
+    else {
+        /* Constant bit rate */
+        params->rateControlPreset = IVIDEO_STORAGE;
+        params->maxBitRate        = envp->videoBitRate;
+    }
+    dynParams->targetBitRate      = params->maxBitRate;
+    dynParams->inputWidth         = envp->resizeWidth;
+    dynParams->inputHeight        = envp->resizeHeight;    
+    dynParams->refFrameRate       = params->maxFrameRate;
+    dynParams->targetFrameRate    = params->maxFrameRate;
+    dynParams->interFrameInterval = 0;
+
+    /* Create the rezise video encoder */
+    hVe2 = Venc1_create(hEngine, envp->videoEncoder, params, dynParams);
+
+    if (hVe1 == NULL || hVe2 == NULL) {
         ERR("Failed to create video encoder: %s\n", envp->videoEncoder);
         cleanup(THREAD_FAILURE);
     }
 
     /* Store the output buffer size in the environment */
     envp->outBufSize = Venc1_getOutBufSize(hVe1);
+
+    /* TODO: verify that the size of resized buffer is correct */
+    /* Store the size of resized buffer in the enviroment */
+    envp->outsBufSize = Venc1_getOutBufSize(hVe2);
 
     /* Signal that the codec is created and output buffer size available */
     Rendezvous_meet(envp->hRendezvousWriter);
@@ -250,6 +294,10 @@ cleanup:
 
     if (hVe1) {
         Venc1_delete(hVe1);
+    }
+
+    if (hVe2) {
+        Venc1_delete(hVe2);
     }
 
     if (hEngine) {

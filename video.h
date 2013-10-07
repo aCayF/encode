@@ -33,10 +33,13 @@ typedef struct VideoEnv {
     Void             *params;
     Void             *dynParams;
     Int32             outBufSize;
+    Int32             outsBufSize;
     Int               videoBitRate;
     Int               videoFrameRate;
     Int32             imageWidth;
     Int32             imageHeight;
+    Int32             resizeWidth;
+    Int32             resizeHeight;
 } VideoEnv;
 
 /* Thread function prototype */
