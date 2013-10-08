@@ -49,7 +49,7 @@ Void *videoThrFxn(Void *arg)
     Engine_Handle           hEngine             = NULL;
     BufTab_Handle           hBufTab             = NULL;
     Int                     frameCnt            = 0;
-    Buffer_Handle           hCapBuf, hDstBuf;
+    Buffer_Handle           hCapBuf, hDstBuf, hRzbBuf, hsDstBuf;
     VIDENC1_Params         *params;
     VIDENC1_DynamicParams  *dynParams;
     Int                     fifoRet;
@@ -224,6 +224,8 @@ Void *videoThrFxn(Void *arg)
         /* Pause processing? */
         Pause_test(envp->hPauseProcess);
 
+        /* Make sure that we get buffers from capture thread 
+           in the order of it putting them to the fifo */
         /* Get a buffer to encode from the capture thread */
         fifoRet = Fifo_get(envp->hCaptureOutFifo, &hCapBuf);
 
@@ -237,7 +239,20 @@ Void *videoThrFxn(Void *arg)
             cleanup(THREAD_SUCCESS);
         }
 
-        /* Get a buffer to encode to from the writer thread */
+        /* Get a resized buffer to encode from the capture thread */
+        fifoRet = Fifo_get(envp->hCaptureOutFifo, &hRzbBuf);
+
+        if (fifoRet < 0) {
+            ERR("Failed to get resizer buffer from capture thread\n");
+            cleanup(THREAD_FAILURE);
+        }
+
+        /* Did the capture thread flush the fifo? */
+        if (fifoRet == Dmai_EFLUSH) {
+            cleanup(THREAD_SUCCESS);
+        }
+
+        /* Get a buffer from the writer thread */
         fifoRet = Fifo_get(envp->hWriterOutFifo, &hDstBuf);
 
         if (fifoRet < 0) {
@@ -250,6 +265,19 @@ Void *videoThrFxn(Void *arg)
             cleanup(THREAD_SUCCESS);
         }
 
+        /* Get a buffer from the writer thread */
+        fifoRet = Fifo_get(envp->hWriterOutFifo, &hsDstBuf);
+
+        if (fifoRet < 0) {
+            ERR("Failed to get buffer from writer thread\n");
+            cleanup(THREAD_FAILURE);
+        }
+
+        /* Did the writer thread flush the fifo? */
+        if (fifoRet == Dmai_EFLUSH) {
+            cleanup(THREAD_SUCCESS);
+        }
+        
         /* Make sure the whole buffer is used for input */
         BufferGfx_resetDimensions(hCapBuf);
 
@@ -258,13 +286,27 @@ Void *videoThrFxn(Void *arg)
             ERR("Failed to encode video buffer\n");
             cleanup(THREAD_FAILURE);
         }
+
+        /* Decode the resized buffer */
+        if (Venc1_process(hVe2, hRzbBuf, hsDstBuf) < 0) {
+            ERR("Failed to encode video buffer\n");
+            cleanup(THREAD_FAILURE);
+        }
+
         /* Send encoded buffer to writer thread for filesystem output */
         if (Fifo_put(envp->hWriterInFifo, hDstBuf) < 0) {
             ERR("Failed to send buffer to writer thread\n");
             cleanup(THREAD_FAILURE);
         }
 
-        /* Return buffer to capture thread */
+        /* Send encoded buffer to writer thread for uploading */
+        if (Fifo_put(envp->hWriterInFifo, hsDstBuf) < 0) {
+            ERR("Failed to send buffer to writer thread\n");
+            cleanup(THREAD_FAILURE);
+        }
+
+        /* Return buffer to capture thread,signal 
+           capture thread that we are done with encoding one frame */
         if (Fifo_put(envp->hCaptureInFifo, hCapBuf) < 0) {
             ERR("Failed to send buffer to capture thread\n");
             cleanup(THREAD_FAILURE);
