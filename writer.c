@@ -10,11 +10,7 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/sem.h>
-#include <sys/shm.h>
-#include <errno.h>
 
 #include <xdc/std.h>
 
@@ -22,6 +18,9 @@
 #include <ti/sdo/dmai/BufTab.h>
 #include <ti/sdo/dmai/BufferGfx.h>
 #include <ti/sdo/dmai/Rendezvous.h>
+
+#include "writer.h"
+#include "../demo.h"
 
 #define MODULE_NAME     "Writer Thread"
 
@@ -38,9 +37,11 @@ Void *writerThrFxn(Void *arg)
     FILE               *outFile         = NULL;
     Buffer_Attrs        bAttrs          = Buffer_Attrs_DEFAULT;
     BufTab_Handle       hBufTab         = NULL;
-    Buffer_Handle       hOutBuf;
+    BufTab_Handle       hsBufTab        = NULL;
+    Buffer_Handle       hOutBuf, hsOutBuf, htmpBuf;
     Int                 fifoRet;
     Int                 bufIdx;
+    Int                 frameCnt        = 0;
 
     /* Open the output video file */
     outFile = fopen(envp->videoFile, "w");
@@ -61,10 +62,26 @@ Void *writerThrFxn(Void *arg)
         cleanup(THREAD_FAILURE);
     }
 
+    /*
+     * Create a table of buffers for communicating resized buffers to
+     * and from the video thread.
+     */
+    hsBufTab = BufTab_create(NUM_WRITER_BUFS, envp->outsBufSize, &bAttrs);
+
+    if (hsBufTab == NULL) {
+        ERR("Failed to allocate contiguous buffers\n");
+        cleanup(THREAD_FAILURE);
+    }
+
     /* Send all buffers to the video thread to be filled with encoded data */
     for (bufIdx = 0; bufIdx < NUM_WRITER_BUFS; bufIdx++) {
         if (Fifo_put(envp->hOutFifo, BufTab_getBuf(hBufTab, bufIdx)) < 0) {
             ERR("Failed to send buffer to video thread\n");
+            cleanup(THREAD_FAILURE);
+        }
+
+        if (Fifo_put(envp->hOutFifo, BufTab_getBuf(hsBufTab, bufIdx)) < 0) {
+            ERR("Failed to send buffer to display thread\n");
             cleanup(THREAD_FAILURE);
         }
     }
@@ -86,11 +103,43 @@ Void *writerThrFxn(Void *arg)
             cleanup(THREAD_SUCCESS);
         }
 
+        /* Get an encoded resized buffer from the video thread */
+        fifoRet = Fifo_get(envp->hInFifo, &hsOutBuf);
+
+        if (fifoRet < 0) {
+            ERR("Failed to get resized buffer from video thread\n");
+            cleanup(THREAD_FAILURE);
+        }
+
+        /* Did the video thread flush the fifo? */
+        if (fifoRet == Dmai_EFLUSH) {
+            cleanup(THREAD_SUCCESS);
+        }
+
+        /* Store the encoded frame to disk */
+        if (Buffer_getNumBytesUsed(hOutBuf)) {
+            if (fwrite(Buffer_getUserPtr(hOutBuf),
+                       Buffer_getNumBytesUsed(hOutBuf), 1, outFile) != 1) {
+                ERR("Error writing the encoded data to video file\n");
+                cleanup(THREAD_FAILURE);
+            }
+        } else {
+            printf("Warning, writer received 0 byte encoded frame\n");
+        }
+
         /* Return buffer to video thread */
         if (Fifo_put(envp->hOutFifo, hOutBuf) < 0) {
             ERR("Failed to send buffer to video thread\n");
             cleanup(THREAD_FAILURE);
         }
+
+        /* Return resized buffer to video thread */
+        if (Fifo_put(envp->hOutFifo, hsOutBuf) < 0) {
+            ERR("Failed to send buffer to video thread\n");
+            cleanup(THREAD_FAILURE);
+        }
+
+        frameCnt++;
     }
 
 cleanup:
@@ -111,5 +160,17 @@ cleanup:
         BufTab_delete(hBufTab);
     }
 	
+    if (hsBufTab) {
+        BufTab_delete(hsBufTab);
+    }
+
+	if (shm_pn) {
+		deleteShm(shm_pn);
+	}
+
+	if (shm_pns) {
+		deleteShm(shm_pns);
+	}
+
     return status;
 }
