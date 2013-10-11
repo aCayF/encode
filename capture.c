@@ -65,6 +65,17 @@ Void *captureThrFxn(Void *arg)
     Int                   bufIdx;
     Bool                  frameCopy = TRUE;
 
+#ifdef PDEBUG
+    FILE               *outFile         = NULL;
+    /* Open the output video file */
+    outFile = fopen("display736x576_yuv420sp.yuv", "w");
+
+    if (outFile == NULL) {
+        ERR("Failed to open %s for writing\n", "display736x576_yuv420sp.yuv");
+        cleanup(THREAD_FAILURE);
+    }
+#endif
+   
     /* Create capture device driver instance */
     cAttrs.numBufs = NUM_CAPTURE_BUFS;
     cAttrs.videoInput = envp->videoInput;
@@ -349,6 +360,15 @@ Void *captureThrFxn(Void *arg)
                 cleanup(THREAD_FAILURE);
             }
 
+#ifdef PDEBUG
+            if (fwrite(Buffer_getUserPtr(hCapBuf),
+                        635904, 1, outFile) != 1) {
+                ERR("Error writing the data to file\n");
+                cleanup(THREAD_FAILURE);
+            }
+            cleanup(THREAD_FAILURE);
+#endif
+
             /* Release display buffer to the display device driver */
             if (Display_put(hDisplay, hDisBuf) < 0) {
                 ERR("Failed to put display buffer\n");
@@ -417,6 +437,11 @@ cleanup:
         Buffer_delete(hRzbBuf);
     }
 
+#ifdef PDEBUG
+    if (outFile) {
+        fclose(outFile);
+    }
+#endif
 
     return status;
 }
