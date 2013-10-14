@@ -126,6 +126,8 @@ Void *videoThrFxn(Void *arg)
     params->reconChromaFormat     = XDM_YUV_420SP;
     params->maxFrameRate          = envp->videoFrameRate;
     Dmai_dbg1("maxFrameRate = %d\n", envp->videoFrameRate);
+    /* We can control the bitrate of cif streaming via 
+       envp->videoBitRate field */
     envp->videoBitRate            = 128*1024;
     Dmai_dbg1("videoBitRate = %d\n", envp->videoBitRate);
     /* Set up codec parameters depending on bit rate */

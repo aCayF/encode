@@ -197,7 +197,7 @@ Void *captureThrFxn(Void *arg)
         VideoStd_getResolution(VideoStd_LCD, &lcdwidth, &lcdheight);
         RzbgfxAttrs.dim.width = width; 
         RzbgfxAttrs.dim.height = height;
-        /* Guarantee that lineLength is multiple of 32 */
+        /* Ensure that lineLength is multiple of 32 */
         RzbgfxAttrs.dim.lineLength =
         ((Int32)((BufferGfx_calcLineLength(RzbgfxAttrs.dim.width,
                               ColorSpace_YUV420PSEMI)+31)/32))*32;
