@@ -29,20 +29,20 @@ static Codec speechEncoders[] = {
 };
 
 /* File extensions for MPEG4 */
-static Char *mpeg4Extensions[] = { ".mpeg4", ".m4v", NULL };
+//static Char *mpeg4Extensions[] = { ".mpeg4", ".m4v", NULL };
 
 /* File extensions for H.264 */
 static Char *h264Extensions[] = { ".264", NULL };
 
 /* NULL terminated list of video encoders in the engine to use in the demo */
 static Codec videoEncoders[] = {
-    {
-        "mpeg4enc",
-        "MPEG4 Video",
-        mpeg4Extensions,
-        NULL,
-        NULL
-    },
+    //{
+    //    "mpeg4enc",
+    //    "MPEG4 Video",
+    //    mpeg4Extensions,
+    //    NULL,
+    //    NULL
+    //},
     {
         "h264enc",
         "H.264 HP",
