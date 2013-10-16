@@ -596,6 +596,9 @@ Int main(Int argc, Char *argv[])
         videoEnv.videoBitRate       = args.videoBitRate;
         videoEnv.imageWidth         = captureEnv.imageWidth;
         videoEnv.imageHeight        = captureEnv.imageHeight;
+        videoEnv.resizeWidth        = captureEnv.resizeWidth;
+        videoEnv.resizeHeight       = captureEnv.resizeHeight;
+        videoEnv.imgEncoder         = "jpegenc";
         videoEnv.engineName         = engine->engineName;
         if (args.videoStd == VideoStd_D1_PAL) {
             videoEnv.videoFrameRate     = 25000;
@@ -630,6 +633,7 @@ Int main(Int argc, Char *argv[])
         writerEnv.hPauseProcess      = hPauseProcess;
         writerEnv.videoFile          = args.videoFile;
         writerEnv.outBufSize         = videoEnv.outBufSize;
+        writerEnv.outsBufSize        = videoEnv.outsBufSize;
 
         if (pthread_create(&writerThread, &attr, writerThrFxn, &writerEnv)) {
             ERR("Failed to create writer thread\n");

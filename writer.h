@@ -27,6 +27,7 @@ typedef struct WriterEnv {
     Fifo_Handle       hInFifo;
     Char             *videoFile;
     Int32             outBufSize;
+    Int32             outsBufSize;
 } WriterEnv;
 
 /* Thread function prototype */

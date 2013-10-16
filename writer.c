@@ -20,12 +20,15 @@
 #include <ti/sdo/dmai/Rendezvous.h>
 
 #include "writer.h"
+#include "shm.h"
 #include "../demo.h"
 
 #define MODULE_NAME     "Writer Thread"
 
 /* Number of buffers in writer pipe */
 #define NUM_WRITER_BUFS         9
+
+#define SHM_DIR2 "/shm/video/v2"
 
 /******************************************************************************
  * writerThrFxn
@@ -42,12 +45,22 @@ Void *writerThrFxn(Void *arg)
     Int                 fifoRet;
     Int                 bufIdx;
     Int                 frameCnt        = 0;
+    SHM_ST	           *shm_pns         = NULL;
 
     /* Open the output video file */
     outFile = fopen(envp->videoFile, "w");
 
     if (outFile == NULL) {
         ERR("Failed to open %s for writing\n", envp->videoFile);
+        cleanup(THREAD_FAILURE);
+    }
+
+    /* Create a share memory for tansporting data to upper layer */
+	shm_pns = createShm(SHM_DIR2, envp->outsBufSize);
+    Dmai_dbg1("bufsize is %d\n",envp->outsBufSize);
+
+    if (shm_pns == NULL) {
+        ERR("Failed to create share memory\n");
         cleanup(THREAD_FAILURE);
     }
 
@@ -116,6 +129,9 @@ Void *writerThrFxn(Void *arg)
             cleanup(THREAD_SUCCESS);
         }
 
+        /* Store the encoded resize frame to shm */
+        writeShm(shm_pns, (char *) Buffer_getUserPtr(hsOutBuf),
+                 (unsigned int) Buffer_getNumBytesUsed(hsOutBuf));
         /* Store the encoded frame to disk */
         if (Buffer_getNumBytesUsed(hOutBuf)) {
             if (fwrite(Buffer_getUserPtr(hOutBuf),
