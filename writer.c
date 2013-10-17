@@ -26,7 +26,7 @@
 #define MODULE_NAME     "Writer Thread"
 
 /* Number of buffers in writer pipe */
-#define NUM_WRITER_BUFS         9
+#define NUM_WRITER_BUFS         1
 
 #define SHM_DIR2 "/shm/video/v2"
 
