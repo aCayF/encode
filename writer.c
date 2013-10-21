@@ -18,6 +18,7 @@
 #include <ti/sdo/dmai/BufTab.h>
 #include <ti/sdo/dmai/BufferGfx.h>
 #include <ti/sdo/dmai/Rendezvous.h>
+#include <ti/sdo/dmai/Time.h>
 
 #include "writer.h"
 #include "shm.h"
@@ -46,9 +47,16 @@ Void *writerThrFxn(Void *arg)
     Int                 bufIdx;
     Int                 frameCnt        = 0;
     SHM_ST	           *shm_pns         = NULL;
+    Char                pathname[40]    = {"\0"};
+    Char                filename[25]    = {"\0"};
 
     /* Open the output video file */
-    outFile = fopen(envp->videoFile, "w");
+    strcpy(pathname,"/mnt/mmc/video/\0");
+    Time_getStr(filename);
+    strcat(pathname,filename);
+    strcat(pathname,".264");
+    outFile = fopen(pathname, "w");
+    Dmai_dbg1("pathname is %s\n",pathname);
 
     if (outFile == NULL) {
         ERR("Failed to open %s for writing\n", envp->videoFile);
