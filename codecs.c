@@ -34,8 +34,18 @@ static Codec speechEncoders[] = {
 /* File extensions for H.264 */
 static Char *h264Extensions[] = { ".264", NULL };
 
+/* File extensions for JPEG */
+static Char  *jpegExtensions[]={".jpeg",".jpg",NULL};
+
 /* NULL terminated list of video encoders in the engine to use in the demo */
 static Codec videoEncoders[] = {
+    {
+        "jpegenc",
+        "jpeg picture",
+         jpegExtensions,
+         NULL, 
+         NULL
+    },
     //{
     //    "mpeg4enc",
     //    "MPEG4 Video",
