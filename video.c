@@ -20,6 +20,7 @@
 #include <ti/sdo/dmai/BufferGfx.h>
 #include <ti/sdo/dmai/Rendezvous.h>
 #include <ti/sdo/dmai/ce/Venc1.h>
+#include <ti/sdo/dmai/ce/Ienc1.h>
 
 #include "video.h"
 #include "../demo.h"
@@ -46,12 +47,15 @@ Void *videoThrFxn(Void *arg)
     BufferGfx_Attrs         gfxAttrs            = BufferGfx_Attrs_DEFAULT;
     Venc1_Handle            hVe1                = NULL;
     Venc1_Handle            hVe2                = NULL;
+    Ienc1_Handle            hIe                 = NULL;
     Engine_Handle           hEngine             = NULL;
     BufTab_Handle           hBufTab             = NULL;
     Int                     frameCnt            = 0;
     Buffer_Handle           hCapBuf, hDstBuf, hRzbBuf, hsDstBuf;
     VIDENC1_Params         *params;
     VIDENC1_DynamicParams  *dynParams;
+    IMGENC1_Params          params_img          = Ienc1_Params_DEFAULT;                                                                                
+    IMGENC1_DynamicParams   dynParams_img       = Ienc1_DynamicParams_DEFAULT;
     Int                     fifoRet;
     Int                     bufIdx;
     ColorSpace_Type         colorSpace = ColorSpace_YUV420PSEMI;
@@ -127,7 +131,7 @@ Void *videoThrFxn(Void *arg)
     params->maxFrameRate          = envp->videoFrameRate;
     Dmai_dbg1("maxFrameRate = %d\n", envp->videoFrameRate);
     /* We can control the bitrate of cif streaming via 
-       envp->videoBitRate field */
+       the envp->videoBitRate field */
     envp->videoBitRate            = 128*1024;
     Dmai_dbg1("videoBitRate = %d\n", envp->videoBitRate);
     /* Set up codec parameters depending on bit rate */
@@ -164,9 +168,33 @@ Void *videoThrFxn(Void *arg)
     /* Store the output buffer size in the environment */
     envp->outBufSize = Venc1_getOutBufSize(hVe1);
 
-    /* TODO: verify that the size of resized buffer is correct */
+    /* TODO: validate the size of resized buffer */
     /* Store the size of resized buffer in the enviroment */
     envp->outsBufSize = Venc1_getOutBufSize(hVe2);
+
+    /* Set up params and dynparams for jpeg*/
+	params_img.maxWidth = envp->imageWidth;
+    params_img.maxHeight = envp->imageHeight;
+    params_img.forceChromaFormat = XDM_YUV_420P;    
+    dynParams_img.inputWidth = params_img.maxWidth;
+    dynParams_img.inputHeight = params_img.maxHeight;
+    dynParams_img.captureWidth = params_img.maxWidth;
+    /* TODO: validate qvalue */
+    //dynParams_img->qValue = envp->qValue;
+    dynParams_img.qValue = 75;
+    if (colorSpace ==  ColorSpace_YUV420PSEMI) { 
+        dynParams_img.inputChromaFormat = XDM_YUV_420SP;
+    } else {
+        /* TODO */
+        dynParams_img.inputChromaFormat = XDM_YUV_422ILE;
+    }
+
+	hIe = Ienc1_create(hEngine, envp->imgEncoder, &params_img, &dynParams_img);
+
+    if (hIe == NULL) {
+        ERR("Failed to create image encoder: %s\n", envp->imgEncoder);
+        cleanup(THREAD_FAILURE);
+    }
 
     /* Signal that the codec is created and output buffer size available */
     Rendezvous_meet(envp->hRendezvousWriter);
@@ -343,6 +371,10 @@ cleanup:
     if (hVe2) {
         Venc1_delete(hVe2);
     }
+
+	if (hIe) {
+	    Ienc1_delete(hIe);
+	}
 
     if (hEngine) {
         Engine_close(hEngine);
