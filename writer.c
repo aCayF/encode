@@ -42,7 +42,7 @@ Void *writerThrFxn(Void *arg)
     Buffer_Attrs        bAttrs          = Buffer_Attrs_DEFAULT;
     BufTab_Handle       hBufTab         = NULL;
     BufTab_Handle       hsBufTab        = NULL;
-    Buffer_Handle       hOutBuf, hsOutBuf, htmpBuf;
+    Buffer_Handle       hOutBuf, hsOutBuf;
     Int                 fifoRet;
     Int                 bufIdx;
     Int                 frameCnt        = 0;
