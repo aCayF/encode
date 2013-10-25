@@ -8,6 +8,8 @@
  * license agreement under which this software has been supplied or provided.
  * ============================================================================
  */
+#include <string.h>
+#include <errno.h>
 
 #include <xdc/std.h>
 
@@ -23,6 +25,7 @@
 #include <ti/sdo/dmai/ce/Ienc1.h>
 
 #include "video.h"
+#include "msqlib.h"
 #include "../demo.h"
 
 #define MODULE_NAME   "Video Thread"
@@ -60,6 +63,26 @@ Void *videoThrFxn(Void *arg)
     Int                     bufIdx;
     ColorSpace_Type         colorSpace = ColorSpace_YUV420PSEMI;
     Bool                    localBufferAlloc = TRUE;
+    struct msg_notify       msg;
+    key_t                   key;
+    int                     msgid;
+
+    /* Generate a key for creating a message queue */
+    key = ftok(PATH,'a');
+
+    if (key == -1) {
+        ERR("Creat Key Error:%s\n", strerror(errno));
+        cleanup(THREAD_FAILURE);
+    }
+
+    /* Generate a message queue by the key */
+    msgid = msgget(key, PERM|IPC_CREAT);
+
+    if (msgid == -1) {
+        ERR("Creat Message Error:%s\n", strerror(errno));
+        cleanup(THREAD_FAILURE);
+    }
+    Dmai_dbg1("msqid = %d\n", msgid);
 
     /* Open the codec engine */
     hEngine = Engine_open(envp->engineName, NULL, NULL);
@@ -310,6 +333,12 @@ Void *videoThrFxn(Void *arg)
         
         /* Make sure the whole buffer is used for input */
         BufferGfx_resetDimensions(hCapBuf);
+
+        /* Make sure the whole buffer is used for input */
+        BufferGfx_resetDimensions(hRzbBuf);
+
+        /* Unblocking recieve a message from the message queue */
+        msgrcv(msgid, &msg, sizeof(struct msg_notify), MSG2SHOOT, IPC_NOWAIT);
 
         /* Decode the video buffer */
         if (Venc1_process(hVe1, hCapBuf, hDstBuf) < 0) {
