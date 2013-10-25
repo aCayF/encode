@@ -372,7 +372,7 @@ Void *videoThrFxn(Void *arg)
         }
 
         /* Increment statistics for the user interface */
-        gblIncVideoBytesProcessed(Buffer_getNumBytesUsed(hDstBuf));
+        gblIncVideoBytesProcessed(Buffer_getNumBytesUsed(hsDstBuf));
 
         frameCnt++;
     }
