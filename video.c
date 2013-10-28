@@ -23,6 +23,8 @@
 #include <ti/sdo/dmai/Rendezvous.h>
 #include <ti/sdo/dmai/ce/Venc1.h>
 #include <ti/sdo/dmai/ce/Ienc1.h>
+#include <ti/sdo/dmai/Time.h>
+#include <ti/sdo/dmai/Dmai.h>
 
 #include "video.h"
 #include "msqlib.h"
@@ -38,6 +40,7 @@
 /* Note: It needs to match capture.c pipe size */
 #define VIDEO_PIPE_SIZE           3
 
+#define PERM S_IRUSR|S_IWUSR
 /******************************************************************************
  * videoThrFxn
  ******************************************************************************/
@@ -63,6 +66,9 @@ Void *videoThrFxn(Void *arg)
     Int                     bufIdx;
     ColorSpace_Type         colorSpace = ColorSpace_YUV420PSEMI;
     Bool                    localBufferAlloc = TRUE;
+    Char                    pathname[40]     = {"\0"};
+    Char                    filename[25]     = {"\0"};
+    FILE                   *outFile          =  NULL;
     struct msg_notify       msg;
     key_t                   key;
     int                     msgid;
@@ -340,7 +346,43 @@ Void *videoThrFxn(Void *arg)
         /* Unblocking recieve a message from the message queue */
         msgrcv(msgid, &msg, sizeof(struct msg_notify), MSG2SHOOT, IPC_NOWAIT);
 
-        /* Decode the video buffer */
+        if (msg.m_type == M_SHOOT) {
+            /* Encode one frame to a image */
+		    if (Ienc1_process(hIe, hCapBuf, hDstBuf) < 0) {
+       	    	ERR("Failed to encode image buffer\n");
+                cleanup(THREAD_FAILURE);
+ 		    }
+
+            /* Get a image file name associated with the time value */
+            strcpy(pathname,"/mnt/mmc/image/\0");
+            Time_getStr(filename);
+            strcat(pathname,filename);
+            strcat(pathname,".jpg");
+
+            /* Open a file for storing the image */
+            outFile = fopen(pathname, "w");
+            Dmai_dbg1("pathname is %s\n",pathname);
+
+            if (outFile == NULL) {
+                ERR("Failed to open %s for writing\n", pathname);
+                cleanup(THREAD_FAILURE);
+            }
+
+		    if (Buffer_getNumBytesUsed(hDstBuf)) {
+            	if (fwrite(Buffer_getUserPtr(hDstBuf),Buffer_getNumBytesUsed(hDstBuf), 1, outFile) != 1) {
+		            ERR("Error writing to image file\n");
+		            cleanup(THREAD_FAILURE);
+                }
+       	    }
+
+            if (outFile) {
+                fclose(outFile);
+                outFile = NULL;
+            }
+            msg.m_type = 0;
+        }
+
+        /* Decode the capture buffer */
         if (Venc1_process(hVe1, hCapBuf, hDstBuf) < 0) {
             ERR("Failed to encode video buffer\n");
             cleanup(THREAD_FAILURE);
