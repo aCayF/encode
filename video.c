@@ -431,6 +431,10 @@ cleanup:
     Rendezvous_meet(envp->hRendezvousCleanup);
 
     /* Clean up the thread before exiting */
+    if (outFile) {
+        fclose(outFile);
+    }
+
     if (hBufTab) {
         BufTab_delete(hBufTab);
     }
