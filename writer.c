@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
+#include <sys/time.h>
 
 #include <xdc/std.h>
 
@@ -30,6 +32,16 @@
 #define NUM_WRITER_BUFS         1
 
 #define SHM_DIR2 "/shm/video/v2"
+
+/* Global timer alarm flag */
+sig_atomic_t    storage_timer_alarm;
+
+/* Timer handler */
+static void
+storage_timer_signal_handler(int signo)
+{
+    storage_timer_alarm = 1;
+}
 
 /******************************************************************************
  * writerThrFxn
@@ -59,6 +71,23 @@ Void *writerThrFxn(Void *arg)
         ERR("Failed to create share memory\n");
         cleanup(THREAD_FAILURE);
     }
+
+    /* Set the timer for storing data to file periodically */
+    memset(&sa, 0, sizeof(struct sigaction));
+    sa.sa_handler = storage_timer_signal_handler;
+    sigemptyset(&sa.sa_mask);
+
+    if (sigaction(SIGALRM, &sa, NULL) == -1) {
+        ERR("Failed to set signal handler\n");
+        cleanup(THREAD_FAILURE);
+    }
+
+    storage_timer_resolution = 60*60;
+    /*TODO : envp->timer_resolution */
+    itv.it_interval.tv_sec = storage_timer_resolution ;
+    itv.it_interval.tv_usec = 0;
+    itv.it_value.tv_sec = storage_timer_resolution ;
+    itv.it_value.tv_usec = 0;
 
     /*
      * Create a table of buffers for communicating buffers to
