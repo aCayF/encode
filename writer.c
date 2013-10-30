@@ -50,18 +50,6 @@ Void *writerThrFxn(Void *arg)
     Char                pathname[40]    = {"\0"};
     Char                filename[25]    = {"\0"};
 
-    /* Open the output video file */
-    strcpy(pathname,"/mnt/mmc/video/\0");
-    Time_getStr(filename);
-    strcat(pathname,filename);
-    strcat(pathname,".264");
-    outFile = fopen(pathname, "w");
-    Dmai_dbg1("pathname is %s\n",pathname);
-
-    if (outFile == NULL) {
-        ERR("Failed to open %s for writing\n", envp->videoFile);
-        cleanup(THREAD_FAILURE);
-    }
 
     /* Create a share memory for tansporting data to upper layer */
 	shm_pns = createShm(SHM_DIR2, envp->outsBufSize);
@@ -110,6 +98,18 @@ Void *writerThrFxn(Void *arg)
     /* Signal that initialization is done and wait for other threads */
     Rendezvous_meet(envp->hRendezvousInit);
 
+    /* Open the output video file */
+    strcpy(pathname,"/mnt/mmc/video/\0");
+    Time_getStr(filename);
+    strcat(pathname,filename);
+    strcat(pathname,".264");
+    outFile = fopen(pathname, "w");
+    Dmai_dbg1("pathname is %s\n",pathname);
+
+    if (outFile == NULL) {
+        ERR("Failed to open %s for writing\n", pathname);
+        cleanup(THREAD_FAILURE);
+    }
     while (TRUE) {
         /* Get an encoded buffer from the video thread */
         fifoRet = Fifo_get(envp->hInFifo, &hOutBuf);
