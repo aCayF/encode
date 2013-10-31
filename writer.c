@@ -58,6 +58,9 @@ Void *writerThrFxn(Void *arg)
     Int                 fifoRet;
     Int                 bufIdx;
     Int                 frameCnt        = 0;
+    struct sigaction    sa;
+    struct itimerval    itv;
+    Int                 storage_timer_resolution;
     SHM_ST	           *shm_pns         = NULL;
     Char                pathname[40]    = {"\0"};
     Char                filename[25]    = {"\0"};
