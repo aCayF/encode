@@ -74,7 +74,7 @@ Void *videoThrFxn(Void *arg)
     int                     msgid;
 
     /* Generate a key for creating a message queue */
-    key = ftok(PATH,'a');
+    key = ftok(PATH,1);
 
     if (key == -1) {
         ERR("Creat Key Error:%s\n", strerror(errno));
